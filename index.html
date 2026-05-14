@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newcastle Port Pulse — Emergency Broadcast</title>
+  <style>
+    :root {
+      --black: #020202;
+      --deep: #090604;
+      --panel: rgba(10, 10, 10, 0.82);
+      --amber: #e29625;
+      --cream: #f3ead8;
+      --muted: rgba(243, 234, 216, 0.62);
+      --line: rgba(243, 234, 216, 0.16);
+      --red: #d84a2b;
+      --red-soft: rgba(216, 74, 43, 0.28);
+      --glow: rgba(226, 150, 37, 0.34);
+      --danger-glow: rgba(216, 74, 43, 0.45);
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      color: var(--cream);
+      font-family: var(--font);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 50% 38%, rgba(216,74,43,0.16), transparent 28%),
+        radial-gradient(circle at 18% 82%, rgba(226,150,37,0.08), transparent 28%),
+        linear-gradient(135deg, #000 0%, #070504 52%, #130603 100%);
+    }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      padding: clamp(16px, 1.8vw, 34px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: clamp(12px, 1.2vw, 22px);
+      isolation: isolate;
+    }
+
+    .stage::before,
+    .stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .stage::before {
+      background:
+        linear-gradient(to right, rgba(243,234,216,0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(243,234,216,0.024) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
+      opacity: 0.56;
+      z-index: 0;
+    }
+
+    .stage::after {
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.022),
+          rgba(255,255,255,0.022) 1px,
+          transparent 1px,
+          transparent 5px
+        ),
+        radial-gradient(circle at center, transparent 0 48%, rgba(0,0,0,0.75) 82%, #000 100%);
+      opacity: 0.48;
+      mix-blend-mode: screen;
+      z-index: 12;
+    }
+
+    .noise {
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 10% 12%, rgba(243,234,216,0.2) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 84% 18%, rgba(216,74,43,0.28) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 72% 88%, rgba(226,150,37,0.18) 0 1px, transparent 1.5px);
+      background-size: 180px 170px, 220px 210px, 270px 250px;
+      opacity: 0.22;
+      animation: noiseFlicker 1.2s steps(2) infinite;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    @keyframes noiseFlicker {
+      0%, 100% { opacity: 0.14; }
+      50% { opacity: 0.32; }
+    }
+
+    header,
+    .main-panel,
+    footer {
+      position: relative;
+      z-index: 2;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .alert-band,
+    .time-card,
+    .radar-card,
+    .instruction-card,
+    .ticker-bar {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow:
+        0 28px 90px rgba(0,0,0,0.44),
+        0 0 34px rgba(216,74,43,0.08);
+      backdrop-filter: blur(14px);
+    }
+
+    .alert-band {
+      position: relative;
+      min-width: 0;
+      border-radius: 24px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(14px, 1.5vw, 24px);
+      padding: clamp(14px, 1.4vw, 22px);
+    }
+
+    .alert-band::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(216,74,43,0.24), transparent 34%, rgba(226,150,37,0.08)),
+        repeating-linear-gradient(
+          135deg,
+          rgba(216,74,43,0.18) 0 10px,
+          transparent 10px 22px
+        );
+      opacity: 0.28;
+      animation: warningSweep 3.8s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes warningSweep {
+      from { transform: translateX(-40px); }
+      to { transform: translateX(40px); }
+    }
+
+    .alert-icon {
+      position: relative;
+      z-index: 1;
+      width: clamp(54px, 5vw, 82px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid rgba(216,74,43,0.72);
+      display: grid;
+      place-items: center;
+      color: var(--red);
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      font-weight: 950;
+      box-shadow:
+        0 0 24px rgba(216,74,43,0.28),
+        inset 0 0 24px rgba(216,74,43,0.1);
+      animation: warningPulse 1.65s ease-in-out infinite;
+    }
+
+    @keyframes warningPulse {
+      0%, 100% { opacity: 0.58; transform: scale(0.97); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+
+    .alert-copy {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
+
+    .eyebrow,
+    .meta-label,
+    .ticker-label {
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      font-weight: 950;
+      font-size: clamp(0.62rem, 0.75vw, 0.78rem);
+    }
+
+    .alert-copy h1 {
+      color: var(--cream);
+      text-transform: uppercase;
+      font-size: clamp(2rem, 4.5vw, 5.2rem);
+      line-height: 0.88;
+      letter-spacing: -0.055em;
+      font-weight: 950;
+      text-shadow: 0 0 28px rgba(216,74,43,0.18);
+      margin-top: 5px;
+    }
+
+    .alert-copy p {
+      color: var(--muted);
+      font-size: clamp(0.82rem, 1vw, 1rem);
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
+    .time-card {
+      border-radius: 24px;
+      padding: clamp(14px, 1.3vw, 20px);
+      min-width: clamp(150px, 14vw, 230px);
+      display: grid;
+      align-content: center;
+      text-align: right;
+    }
+
+    .clock {
+      color: var(--cream);
+      font-size: clamp(1.35rem, 2.25vw, 2.5rem);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.04em;
+    }
+
+    .main-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.44fr);
+      gap: clamp(14px, 1.4vw, 24px);
+      min-height: 0;
+    }
+
+    .radar-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: clamp(24px, 2vw, 34px);
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(24px, 3vw, 52px);
+    }
+
+    .radar-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 40% 42%, rgba(216,74,43,0.22), transparent 16%),
+        radial-gradient(circle at 58% 54%, rgba(226,150,37,0.16), transparent 18%),
+        radial-gradient(circle at 48% 66%, rgba(216,74,43,0.18), transparent 14%);
+      filter: blur(10px);
+      opacity: 0.62;
+      animation: stormDrift 9s ease-in-out infinite alternate;
+    }
+
+    @keyframes stormDrift {
+      from { transform: translate(-2%, 1%) scale(1); }
+      to { transform: translate(3%, -2%) scale(1.08); }
+    }
+
+    .radar {
+      position: absolute;
+      width: min(72vh, 54vw);
+      aspect-ratio: 1;
+      border: 1px solid rgba(226,150,37,0.38);
+      border-radius: 50%;
+      opacity: 0.76;
+      background:
+        radial-gradient(circle, transparent 0 20%, rgba(226,150,37,0.16) 20.4% 20.9%, transparent 21% 42%, rgba(226,150,37,0.12) 42.4% 42.9%, transparent 43% 64%, rgba(216,74,43,0.18) 64.4% 64.9%, transparent 65%),
+        linear-gradient(to right, transparent 49.8%, rgba(243,234,216,0.16) 50%, transparent 50.2%),
+        linear-gradient(to bottom, transparent 49.8%, rgba(243,234,216,0.16) 50%, transparent 50.2%);
+      filter:
+        drop-shadow(0 0 22px rgba(226,150,37,0.18))
+        drop-shadow(0 0 28px rgba(216,74,43,0.12));
+    }
+
+    .radar::before {
+      content: "";
+      position: absolute;
+      inset: 50% 50% auto auto;
+      width: 50%;
+      height: 3px;
+      transform-origin: left center;
+      background: linear-gradient(90deg, rgba(216,74,43,0.95), rgba(226,150,37,0.55), transparent);
+      animation: radarSweep 5.2s linear infinite;
+    }
+
+    .radar::after {
+      content: "";
+      position: absolute;
+      inset: 13%;
+      border-radius: 50%;
+      border: 1px dashed rgba(243,234,216,0.18);
+      animation: radarJitter 2.4s steps(2) infinite;
+    }
+
+    @keyframes radarSweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes radarJitter {
+      0%, 100% { opacity: 0.28; transform: translate(0,0) scale(0.98); }
+      50% { opacity: 0.68; transform: translate(2px,-1px) scale(1); }
+    }
+
+    .storm-cell {
+      position: absolute;
+      border-radius: 48% 52% 46% 54%;
+      background:
+        radial-gradient(circle, rgba(216,74,43,0.9), rgba(226,150,37,0.44) 36%, rgba(216,74,43,0.12) 64%, transparent 74%);
+      filter: blur(1px) drop-shadow(0 0 16px rgba(216,74,43,0.32));
+      opacity: 0.58;
+      mix-blend-mode: screen;
+      animation: cellPulse 3.5s ease-in-out infinite;
+    }
+
+    .cell-1 {
+      width: 130px;
+      height: 90px;
+      left: 58%;
+      top: 36%;
+    }
+
+    .cell-2 {
+      width: 90px;
+      height: 70px;
+      left: 42%;
+      top: 55%;
+      animation-delay: 0.6s;
+    }
+
+    .cell-3 {
+      width: 160px;
+      height: 96px;
+      left: 48%;
+      top: 24%;
+      opacity: 0.38;
+      animation-delay: 1.1s;
+    }
+
+    @keyframes cellPulse {
+      0%, 100% { transform: scale(0.96); opacity: 0.38; }
+      50% { transform: scale(1.08); opacity: 0.78; }
+    }
+
+    .alert-center {
+      position: relative;
+      z-index: 4;
+      width: min(720px, 92%);
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      gap: clamp(12px, 1.4vw, 20px);
+    }
+
+    .alert-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border: 1px solid rgba(216,74,43,0.38);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.42);
+      color: var(--red);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-weight: 950;
+      font-size: clamp(0.65rem, 0.85vw, 0.9rem);
+      box-shadow: 0 0 22px rgba(216,74,43,0.12);
+    }
+
+    .alert-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 16px var(--red);
+      animation: warningPulse 1.2s ease-in-out infinite;
+    }
+
+    .alert-center h2 {
+      color: var(--cream);
+      text-transform: uppercase;
+      font-size: clamp(3rem, 8vw, 8.4rem);
+      line-height: 0.82;
+      letter-spacing: -0.08em;
+      font-weight: 950;
+      text-shadow:
+        0 0 24px rgba(216,74,43,0.24),
+        0 24px 80px rgba(0,0,0,0.42);
+    }
+
+    .region {
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 950;
+      font-size: clamp(0.78rem, 1vw, 1.1rem);
+    }
+
+    .message {
+      color: var(--muted);
+      max-width: 620px;
+      font-size: clamp(1rem, 1.25vw, 1.35rem);
+      line-height: 1.42;
+    }
+
+    .instruction-card {
+      border-radius: clamp(24px, 2vw, 34px);
+      padding: clamp(18px, 1.7vw, 28px);
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .instruction-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .instruction-row {
+      border-top: 1px solid var(--line);
+      padding-top: 13px;
+    }
+
+    .instruction-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .info-value {
+      color: var(--cream);
+      font-size: clamp(1rem, 1.24vw, 1.3rem);
+      font-weight: 950;
+      letter-spacing: -0.035em;
+      margin-top: 6px;
+    }
+
+    .info-note {
+      color: var(--muted);
+      font-size: clamp(0.78rem, 0.88vw, 0.94rem);
+      line-height: 1.38;
+      margin-top: 5px;
+    }
+
+    .severity-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .severity {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(0,0,0,0.28);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .bar {
+      width: 8px;
+      height: 38px;
+      border-radius: 999px;
+      background: var(--red);
+      box-shadow: 0 0 14px rgba(216,74,43,0.34);
+      animation: barPulse 1.7s ease-in-out infinite;
+    }
+
+    @keyframes barPulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 1; }
+    }
+
+    .severity strong {
+      display: block;
+      color: var(--cream);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .severity span {
+      color: var(--muted);
+      display: block;
+      margin-top: 3px;
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
+
+    footer {
+      min-height: 54px;
+    }
+
+    .ticker-bar {
+      height: 100%;
+      border-radius: 22px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .ticker-label,
+    .ticker-clock {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 0 18px;
+      white-space: nowrap;
+    }
+
+    .ticker-label {
+      color: var(--red);
+      background: rgba(216,74,43,0.14);
+      border-right: 1px solid rgba(216,74,43,0.3);
+    }
+
+    .ticker-clock {
+      color: var(--amber);
+      border-left: 1px solid var(--line);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ticker-window {
+      overflow: hidden;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .ticker-track {
+      display: inline-block;
+      padding-left: 100%;
+      animation: ticker 28s linear infinite;
+      color: var(--cream);
+      letter-spacing: 0.045em;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+    }
+
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to { transform: translateX(-100%); }
+    }
+
+    .glitch {
+      animation: glitchShift 4.6s steps(1) infinite;
+    }
+
+    @keyframes glitchShift {
+      0%, 94%, 100% { transform: translate(0,0); filter: none; }
+      95% { transform: translate(1px,-1px); filter: hue-rotate(-8deg); }
+      96% { transform: translate(-1px,1px); filter: contrast(1.1); }
+      97% { transform: translate(0,0); filter: none; }
+    }
+
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+
+      .stage {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+
+      header,
+      .main-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .time-card {
+        text-align: left;
+        min-width: 0;
+      }
+
+      .radar-card {
+        min-height: 540px;
+      }
+
+      .radar {
+        width: min(560px, 84vw);
+      }
+
+      .ticker-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .ticker-label,
+      .ticker-clock {
+        padding: 12px;
+        border: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .stage {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .alert-band {
+        grid-template-columns: 1fr;
+      }
+
+      .alert-icon {
+        width: 58px;
+      }
+
+      .radar-card {
+        min-height: 500px;
+        padding: 22px;
+      }
+
+      .alert-center h2 {
+        font-size: clamp(3.2rem, 17vw, 5.2rem);
+      }
+    }
+
+    @media (max-height: 720px) and (min-width: 981px) {
+      .stage {
+        padding: 14px;
+        gap: 10px;
+      }
+
+      .alert-copy h1 {
+        font-size: clamp(1.8rem, 3.6vw, 4rem);
+      }
+
+      .alert-center h2 {
+        font-size: clamp(3.4rem, 7vw, 7rem);
+      }
+
+      .instruction-card {
+        padding: 16px;
+      }
+
+      .instruction-stack {
+        gap: 10px;
+      }
+
+      .instruction-row {
+        padding-top: 9px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="noise" aria-hidden="true"></div>
+
+    <header>
+      <section class="alert-band glitch">
+        <div class="alert-icon">!</div>
+
+        <div class="alert-copy">
+          <div class="eyebrow">Newcastle Port Pulse Emergency Broadcast System</div>
+          <h1>Weather Alert Active</h1>
+          <p>Automated relay bulletin. Conditions may change rapidly. Continue monitoring official sources.</p>
+        </div>
+      </section>
+
+      <aside class="time-card">
+        <div class="meta-label">Local Time</div>
+        <div id="clock" class="clock">00:00</div>
+      </aside>
+    </header>
+
+    <section class="main-panel">
+      <section class="radar-card">
+        <div class="radar" aria-hidden="true"></div>
+        <div class="storm-cell cell-1" aria-hidden="true"></div>
+        <div class="storm-cell cell-2" aria-hidden="true"></div>
+        <div class="storm-cell cell-3" aria-hidden="true"></div>
+
+        <div class="alert-center glitch">
+          <div class="alert-status">
+            <span class="alert-dot"></span>
+            <span>Live Conditions Updating</span>
+          </div>
+
+          <h2>Storm<br />Warning</h2>
+
+          <div class="region">Newcastle • Clarington • North Shore Corridor</div>
+
+          <p class="message">
+            Severe weather activity detected near the lakeshore. Watch for sudden wind, reduced visibility, standing water, and rapid changes along exposed roads.
+          </p>
+        </div>
+      </section>
+
+      <aside class="instruction-card">
+        <div class="instruction-stack">
+          <div class="instruction-row">
+            <div class="meta-label">Alert Type</div>
+            <div class="info-value">Severe Thunderstorm Watch</div>
+            <div class="info-note">Potential for high winds, heavy rain, lightning, and localized flooding.</div>
+          </div>
+
+          <div class="instruction-row">
+            <div class="meta-label">Recommended Action</div>
+            <div class="info-value">Monitor Conditions</div>
+            <div class="info-note">Move indoors if thunder is heard. Avoid flooded roads and exposed lakeshore areas.</div>
+          </div>
+
+          <div class="instruction-row">
+            <div class="meta-label">Station Relay</div>
+            <div class="info-value">Emergency Mode</div>
+            <div class="info-note">Broadcast signal remains active. Updates will continue as conditions develop.</div>
+          </div>
+        </div>
+
+        <div class="severity-grid">
+          <div class="severity">
+            <div class="bar"></div>
+            <div>
+              <strong>Alert Level: Elevated</strong>
+              <span>Signal relay active. Weather bulletin priority increased.</span>
+            </div>
+          </div>
+
+          <div class="severity">
+            <div class="bar"></div>
+            <div>
+              <strong>Visibility: Variable</strong>
+              <span>Rain bands and road spray may reduce visibility without warning.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <footer>
+      <div class="ticker-bar">
+        <div class="ticker-label">Emergency Wire</div>
+        <div class="ticker-window">
+          <div class="ticker-track">
+            Weather alert active • Newcastle Port Pulse emergency relay is online • Monitor official weather sources • Avoid flooded roads • Stay with the signal •
+          </div>
+        </div>
+        <div id="tickerClock" class="ticker-clock">00:00</div>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      document.getElementById("clock").textContent = time;
+      document.getElementById("tickerClock").textContent = time;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
