@@ -288,16 +288,27 @@
         drop-shadow(0 0 28px rgba(216,74,43,0.12));
     }
 
-    .radar::before {
-      content: "";
-      position: absolute;
-      inset: 50% 50% auto auto;
-      width: 50%;
-      height: 3px;
-      transform-origin: left center;
-      background: linear-gradient(90deg, rgba(216,74,43,0.95), rgba(226,150,37,0.55), transparent);
-      animation: radarSweep 5.2s linear infinite;
-    }
+.radar::before {
+  content: "";
+  position: absolute;
+
+  top: calc(50% - 1.5px);
+  left: 50%;
+
+  width: 50%;
+  height: 3px;
+
+  transform-origin: left center;
+
+  background: linear-gradient(
+    90deg,
+    rgba(216,74,43,0.95),
+    rgba(226,150,37,0.55),
+    transparent
+  );
+
+  animation: radarSweep 5.2s linear infinite;
+}
 
     .radar::after {
       content: "";
@@ -309,9 +320,14 @@
     }
 
     @keyframes radarSweep {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
 
     @keyframes radarJitter {
       0%, 100% { opacity: 0.28; transform: translate(0,0) scale(0.98); }
